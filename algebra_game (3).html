@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ms. McGuire's Algebra Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --navy: #1a2e4a;
+  --teal: #00b4d8;
+  --teal-dark: #0096c7;
+  --amber: #ffb703;
+  --amber-dark: #fb8500;
+  --green: #2dc653;
+  --green-dark: #22a03e;
+  --purple: #7b2d8b;
+  --purple-light: #c77dff;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: linear-gradient(135deg, #1a2e4a 0%, #0077b6 50%, #00b4d8 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 30px 16px;
+}
+
+.stars { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.star { position: absolute; background: #fff; border-radius: 50%; opacity: 0.3; animation: twinkle 3s infinite alternate; }
+@keyframes twinkle { from { opacity: 0.1; } to { opacity: 0.5; } }
+
+.container {
+  position: relative; z-index: 1;
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+  padding: 36px 40px;
+  max-width: 680px;
+  width: 100%;
+}
+
+.screen { display: none; }
+.screen.active { display: block; animation: fadeUp 0.3s ease; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.game-logo { font-family: 'Fredoka One', cursive; font-size: 2rem; color: var(--navy); text-align: center; line-height: 1.2; }
+.game-logo span { color: var(--teal); }
+.subtitle { text-align: center; color: #5a7090; font-size: 0.9rem; margin-top: 4px; font-weight: 600; margin-bottom: 20px; }
+
+h2 { font-family: 'Fredoka One', cursive; color: var(--navy); font-size: 1.4rem; margin-bottom: 10px; }
+p { color: #3d5068; line-height: 1.6; margin-bottom: 10px; }
+.divider { border: none; border-top: 2px solid #e8f0fa; margin: 18px 0; }
+
+label { font-weight: 700; color: var(--navy); display: block; margin-bottom: 6px; font-size: 0.95rem; }
+input[type="text"], textarea {
+  width: 100%; border: 2.5px solid #c8dff0; border-radius: 12px;
+  padding: 12px 15px; font-size: 1rem; font-family: 'Nunito', sans-serif;
+  color: var(--navy); outline: none; transition: border-color 0.2s; background: #fff;
+}
+input[type="text"]:focus, textarea:focus { border-color: var(--teal); }
+textarea { resize: vertical; min-height: 80px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 26px; font-family: 'Fredoka One', cursive; font-size: 1.05rem;
+  border: none; border-radius: 50px; cursor: pointer;
+  transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s; letter-spacing: 0.3px;
+}
+.btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,0.15); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: linear-gradient(135deg, var(--teal), var(--teal-dark)); color: #fff; }
+.btn-amber   { background: linear-gradient(135deg, var(--amber), var(--amber-dark)); color: #fff; }
+.btn-green   { background: linear-gradient(135deg, var(--green), var(--green-dark)); color: #fff; }
+.btn-purple  { background: linear-gradient(135deg, var(--purple), var(--purple-light)); color: #fff; }
+.btn-sm { padding: 9px 20px; font-size: 0.92rem; }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+.smiley-label { font-weight: 800; color: var(--navy); font-size: 0.95rem; margin-bottom: 10px; display: block; }
+.smiley-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+.smiley-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: #f0f6ff; border: 2.5px solid #c8dff0; border-radius: 14px;
+  padding: 10px 12px; cursor: pointer; font-size: 1.6rem; min-width: 64px;
+  transition: all 0.15s;
+}
+.smiley-btn .sl { font-size: 0.65rem; font-weight: 700; color: #5a7090; font-family: 'Nunito', sans-serif; }
+.smiley-btn:hover { border-color: var(--teal); background: #e4f5ff; transform: scale(1.05); }
+.smiley-btn.sel { border-color: var(--amber); background: #fff8e8; transform: scale(1.05); }
+
+.level-badge {
+  display: inline-flex; align-items: center;
+  background: linear-gradient(90deg, var(--teal), var(--purple-light));
+  color: #fff; font-family: 'Fredoka One', cursive; font-size: 1rem;
+  padding: 5px 16px; border-radius: 50px;
+}
+.progress-wrap { background: #e8f0fa; border-radius: 50px; height: 9px; margin: 10px 0 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--amber)); border-radius: 50px; transition: width 0.4s ease; }
+.q-counter { font-size: 0.8rem; color: #8090a8; font-weight: 700; text-align: right; }
+
+.q-card {
+  background: linear-gradient(135deg, #f0f8ff, #f7f0ff);
+  border: 2px solid #c8e0f0; border-radius: 16px; padding: 20px 24px; margin: 16px 0;
+}
+.q-text { font-family: 'Fredoka One', cursive; font-size: 1.5rem; color: var(--navy); margin-bottom: 4px; }
+.q-hint { font-size: 0.8rem; color: #7090b0; font-style: italic; margin-bottom: 14px; }
+.answer-row { display: flex; gap: 10px; align-items: center; }
+.answer-row input { flex: 1; margin-bottom: 0; }
+
+.fb-banner {
+  border-radius: 12px; padding: 12px 16px; font-weight: 700; font-size: 0.95rem;
+  margin-top: 12px; display: flex; align-items: center; gap: 8px;
+}
+.fb-correct   { background: #d4f7e0; color: #166534; border: 2px solid #86efac; }
+.fb-incorrect { background: #fee2e2; color: #991b1b; border: 2px solid #fca5a5; }
+.live-score { margin-top: 14px; font-size: 0.78rem; color: #aabbc8; text-align: center; }
+
+.score-big { font-family: 'Fredoka One', cursive; font-size: 3.2rem; color: var(--navy); text-align: center; line-height: 1; }
+.score-pct { font-family: 'Fredoka One', cursive; font-size: 1.7rem; color: var(--teal); text-align: center; margin-bottom: 6px; }
+.result-band {
+  display: block; width: fit-content; margin: 8px auto;
+  padding: 8px 20px; border-radius: 50px;
+  font-family: 'Fredoka One', cursive; font-size: 1rem; text-align: center;
+}
+.band-great { background: #d4f7e0; color: #166534; }
+.band-good  { background: #fef9c3; color: #854d0e; }
+.band-try   { background: #fee2e2; color: #991b1b; }
+
+.q-review { margin: 14px 0; }
+.q-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-radius: 10px; margin-bottom: 5px;
+  font-size: 0.85rem; font-weight: 700;
+}
+.q-ok  { background: #d4f7e0; color: #166534; }
+.q-bad { background: #fee2e2; color: #991b1b; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.q-ok  .dot { background: #22c55e; }
+.q-bad .dot { background: #ef4444; }
+.q-ans { margin-left: auto; font-size: 0.78rem; opacity: 0.85; white-space: nowrap; }
+
+.tips-box {
+  background: #f0f8ff; border: 2px solid #c8e6ff;
+  border-radius: 12px; padding: 14px 18px; margin: 12px 0;
+}
+.tips-box h4 { color: var(--navy); font-size: 0.9rem; margin-bottom: 6px; font-weight: 800; }
+.tips-box ul { padding-left: 16px; }
+.tips-box li { color: #3d5068; font-size: 0.85rem; margin-bottom: 4px; line-height: 1.5; }
+
+.feedback-box {
+  background: #f8f0ff; border: 2px solid #e0c8ff;
+  border-radius: 12px; padding: 14px 18px; margin: 14px 0;
+}
+.feedback-box label { color: var(--purple); }
+
+.congrats { font-size: 3.5rem; text-align: center; display: block; margin-bottom: 6px; }
+.level-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
+.ls-card { background: #f8faff; border: 2px solid #cde; border-radius: 12px; padding: 12px; text-align: center; }
+.ls-card .ln { font-size: 0.72rem; color: #7090a0; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
+.ls-card .lsc { font-family: 'Fredoka One', cursive; font-size: 1.5rem; color: var(--navy); }
+.ls-card .lsp { font-size: 0.82rem; color: var(--teal); font-weight: 700; }
+
+sup { font-size: 0.68em; vertical-align: super; }
+
+@media (max-width: 500px) {
+  .container { padding: 22px 16px; }
+  .game-logo { font-size: 1.5rem; }
+  .level-grid { grid-template-columns: 1fr; }
+  .smiley-btn { min-width: 54px; padding: 8px 8px; font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+
+<div class="container">
+
+  <!-- WELCOME -->
+  <div id="s-welcome" class="screen active">
+    <div class="game-logo">🔢 Ms. McGuire's <span>Algebra Quest</span></div>
+    <div class="subtitle">Adding &amp; Subtracting Algebraic Expressions</div>
+    <h2>Welcome! Let's get started 🚀</h2>
+    <p>Work through 6 levels of algebra challenges. Answer each question to the best of your ability and get your score out of 10 at the end of each level. Good luck!</p>
+    <label for="studentName">Your Name</label>
+    <input type="text" id="studentName" placeholder="Enter your first name…" maxlength="40" style="margin-bottom:16px;">
+    <div class="divider"></div>
+    <span class="smiley-label">How confident do you feel about adding &amp; subtracting algebra? 😊</span>
+    <div class="smiley-row" id="smWelcome"></div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="startGame()">Start Playing ➜</button>
+    </div>
+  </div>
+
+  <!-- QUESTION -->
+  <div id="s-question" class="screen">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+      <span class="level-badge" id="lvlBadge">⭐ Level 1</span>
+      <span class="q-counter" id="qCount">Question 1 / 10</span>
+    </div>
+    <div class="progress-wrap"><div class="progress-fill" id="progBar" style="width:0%"></div></div>
+    <div class="q-card">
+      <div class="q-text" id="qText"></div>
+      <div class="q-hint" id="qHint"></div>
+      <div class="answer-row">
+        <input type="text" id="ansInput" placeholder="Type your answer here…">
+        <button class="btn btn-amber btn-sm" id="checkBtn" onclick="checkAnswer()">Check ✓</button>
+      </div>
+    </div>
+    <div id="fbBanner" style="display:none;"></div>
+    <div id="nextWrap" style="display:none;" class="btn-row">
+      <button class="btn btn-primary btn-sm" onclick="nextQuestion()">Next Question ➜</button>
+    </div>
+    <div class="live-score">Score: <strong id="liveScore">0</strong> / <strong id="liveTot">0</strong></div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="s-result" class="screen">
+    <div id="resultContent"></div>
+  </div>
+
+  <!-- FINAL -->
+  <div id="s-final" class="screen">
+    <div id="finalContent"></div>
+  </div>
+
+</div>
+
+<script>
+var LEVELS = [
+  {
+    name: "Level 1 – Like Terms (1 variable)",
+    badge: "⭐ Level 1",
+    hint: "Collect like terms. Numbers with the same letter can be added together!",
+    questions: [
+      { q: "a + 5a",        a: ["6a"] },
+      { q: "3b + 2b",       a: ["5b"] },
+      { q: "7x − 3x",       a: ["4x"] },
+      { q: "2n + n",        a: ["3n"] },
+      { q: "4p − p",        a: ["3p"] },
+      { q: "6m − 2m + m",   a: ["5m"] },
+      { q: "8t − 5t",       a: ["3t"] },
+      { q: "3k + 4k − 2k",  a: ["5k"] },
+      { q: "9w − w − 3w",   a: ["5w"] },
+      { q: "2c + 3c + c",   a: ["6c"] }
+    ]
+  },
+  {
+    name: "Level 2 – Two Variables",
+    badge: "🌟 Level 2",
+    hint: "Collect x-terms together and y-terms together separately.",
+    questions: [
+      { q: "x + 2y − 3x + y",     a: ["-2x+3y","3y-2x"] },
+      { q: "4a + 3b − 2a + b",    a: ["2a+4b"] },
+      { q: "5x − y + 2x − 3y",    a: ["7x-4y"] },
+      { q: "3p + 2q − p − q",     a: ["2p+q"] },
+      { q: "6m − 2n + m + 3n",    a: ["7m+n"] },
+      { q: "2a − 5b + 4a − b",    a: ["6a-6b"] },
+      { q: "x + y + 2x − 3y",     a: ["3x-2y"] },
+      { q: "4c − d + c + 5d",     a: ["5c+4d"] },
+      { q: "7x − 2y − 4x + 5y",   a: ["3x+3y"] },
+      { q: "3a + 4b − a − 2b",    a: ["2a+2b"] }
+    ]
+  },
+  {
+    name: "Level 3 – Expanding Brackets",
+    badge: "💫 Level 3",
+    hint: "Multiply every term inside the bracket by the term outside.",
+    questions: [
+      { q: "3(x − 2y)",      a: ["3x-6y"] },
+      { q: "2(a + 4)",       a: ["2a+8"] },
+      { q: "5(2x − 3)",      a: ["10x-15"] },
+      { q: "4(3m + 2n)",     a: ["12m+8n"] },
+      { q: "-2(x + 5)",      a: ["-2x-10"] },
+      { q: "3(2a − b)",      a: ["6a-3b"] },
+      { q: "x(x + 4)",       a: ["x^2+4x"] },
+      { q: "2(5 − 3t)",      a: ["10-6t"] },
+      { q: "-3(2x − 4)",     a: ["-6x+12","12-6x"] },
+      { q: "4(a + 2b − c)",  a: ["4a+8b-4c"] }
+    ]
+  },
+  {
+    name: "Level 4 – Expand & Simplify",
+    badge: "✨ Level 4",
+    hint: "Expand each bracket first, then collect like terms.",
+    questions: [
+      { q: "2(3x + 1) − x(2x + 2)",    a: ["-2x^2+4x+2"] },
+      { q: "3(x + 2) + 2(x − 1)",      a: ["5x+4"] },
+      { q: "4(2a − 1) − 2(a + 3)",     a: ["6a-10"] },
+      { q: "x(x + 3) + 2(x + 1)",      a: ["x^2+5x+2"] },
+      { q: "5(m − 2) − 3(m + 1)",      a: ["2m-13"] },
+      { q: "2(a + b) + 3(a − b)",      a: ["5a-b"] },
+      { q: "x(2x − 1) + 3x",           a: ["2x^2+2x"] },
+      { q: "4(2x + 3) − 2(x − 5)",     a: ["6x+22"] },
+      { q: "3(x + 2y) − 2(x − y)",     a: ["x+8y"] },
+      { q: "2x(x + 3) − x(x − 1)",     a: ["x^2+7x"] }
+    ]
+  },
+  {
+    name: "Level 5 – Double Brackets",
+    badge: "🏆 Level 5",
+    hint: "Use FOIL: First, Outer, Inner, Last — multiply every term in the first bracket by every term in the second.",
+    questions: [
+      { q: "(x − 2)(2x + 3)",      a: ["2x^2-x-6"] },
+      { q: "(x + 3)(x + 2)",       a: ["x^2+5x+6"] },
+      { q: "(x − 4)(x + 1)",       a: ["x^2-3x-4"] },
+      { q: "(2x + 1)(x + 3)",      a: ["2x^2+7x+3"] },
+      { q: "(x + 5)(x − 5)",       a: ["x^2-25"] },
+      { q: "(3x − 2)(x + 4)",      a: ["3x^2+10x-8"] },
+      { q: "(x + 4)^2",            a: ["x^2+8x+16"] },
+      { q: "(2x − 3)(2x + 3)",     a: ["4x^2-9"] },
+      { q: "(x − 1)(x^2 + x + 1)", a: ["x^3-1"] },
+      { q: "(x + 2)(3x − 5)",      a: ["3x^2+x-10"] }
+    ]
+  },
+  {
+    name: "Level 6 – Challenge Mix 🔥",
+    badge: "🔥 Level 6",
+    hint: "Mix of all skills — think carefully before you answer!",
+    questions: [
+      { q: "(x+1)^2 − (x−1)^2",                               a: ["4x"] },
+      { q: "3x(x−2) − (x+1)(x−3)",                            a: ["2x^2-2x+3"] },
+      { q: "(2x+y)^2 − y^2",                                   a: ["4x^2+4xy"] },
+      { q: "(x+3)(x−2) + 2(x^2−1)",                           a: ["3x^2+x-8"] },
+      { q: "(a+b)^2 − 2ab",                                    a: ["a^2+b^2"] },
+      { q: "2(x+1)^3  where (x+1)^3 = x^3+3x^2+3x+1",        a: ["2x^3+6x^2+6x+2"] },
+      { q: "(x−2)(x+2)(x^2+4)",                                a: ["x^4-16"] },
+      { q: "Factorise: x^2+5x+6",                              a: ["(x+2)(x+3)","(x+3)(x+2)"] },
+      { q: "Simplify: (3x^2y)(2xy^3)",                         a: ["6x^3y^4"] },
+      { q: "(x+1)(x+2)(x+3)",                                  a: ["x^3+6x^2+11x+6"] }
+    ]
+  }
+];
+
+var REVISION_TOPICS = [
+  ["Collecting like terms (single variable)", "Adding and subtracting with coefficients"],
+  ["Like terms with two variables", "Identifying and grouping different letter terms"],
+  ["Expanding single brackets", "Multiplying terms inside brackets"],
+  ["Expanding and simplifying expressions", "Combining like terms after expanding"],
+  ["Double bracket expansion using FOIL", "Squaring brackets and difference of two squares"],
+  ["Mixed algebraic manipulation", "Factorisation, higher powers, complex expansion"]
+];
+
+var TIPS = [
+  [
+    "Only collect letters that are the same — 'a' and 'b' are different terms!",
+    "Remember: 'a' means '1a' — the coefficient is always there even if invisible.",
+    "Write out each step clearly — tidy working prevents mistakes.",
+    "Check your answer by substituting a number (e.g. a = 2) into both sides."
+  ],
+  [
+    "Sort your expression: write all x-terms first, then y-terms.",
+    "Watch out for minus signs — they belong to the term that follows them.",
+    "Underline or circle like terms before collecting them.",
+    "Write the positive term first in your answer for neatness."
+  ],
+  [
+    "Multiply every term inside the bracket — don't skip any!",
+    "Negative × positive = negative. Check your signs carefully.",
+    "For x(x+4): x × x = x², not just x.",
+    "After expanding, always look for remaining like terms to collect."
+  ],
+  [
+    "Expand each bracket separately before combining anything.",
+    "Write out all terms before cancelling — don't rush.",
+    "Be extra careful with negative signs outside brackets.",
+    "Common mistake: −2(x−3) = −2x+6, NOT −2x−6."
+  ],
+  [
+    "FOIL = First, Outer, Inner, Last — four products every time.",
+    "For (a+b)²: don't just square each term — you also need the middle term 2ab.",
+    "Difference of two squares: (a+b)(a−b) = a²−b². Memorise this!",
+    "Write out every product before simplifying — you should always get four terms first."
+  ],
+  [
+    "When stuck, break the expression into smaller parts and work step by step.",
+    "Learn the key identities: (a+b)², (a−b)², (a+b)(a−b).",
+    "For factorisation, find two numbers that multiply to give c and add to give b.",
+    "Practice challenge questions regularly — they build real algebraic fluency!"
+  ]
+];
+
+// ── STATE ─────────────────────────────────────────────────────────
+var G = {
+  name: "",
+  welcomeConf: null,
+  level: 0,
+  qIndex: 0,
+  score: 0,
+  answers: [],
+  levelResults: [],
+  postConf: null,
+  answered: false
+};
+
+// ── INIT ──────────────────────────────────────────────────────────
+(function() {
+  // Starfield
+  var s = document.getElementById('stars');
+  for (var i = 0; i < 50; i++) {
+    var d = document.createElement('div');
+    d.className = 'star';
+    var sz = Math.random() * 3 + 1;
+    d.style.cssText = 'width:'+sz+'px;height:'+sz+'px;top:'+(Math.random()*100)+'%;left:'+(Math.random()*100)+'%;animation-delay:'+(Math.random()*4)+'s;animation-duration:'+(2+Math.random()*3)+'s';
+    s.appendChild(d);
+  }
+  buildSmileys('smWelcome', 'welcome');
+  document.getElementById('ansInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') checkAnswer();
+  });
+})();
+
+function buildSmileys(cid, type) {
+  var faces = [
+    {e:'😟', l:'Very Unsure'},
+    {e:'😕', l:'Unsure'},
+    {e:'😐', l:'OK'},
+    {e:'🙂', l:'Confident'},
+    {e:'😄', l:'Very Sure'}
+  ];
+  var c = document.getElementById(cid);
+  if (!c) return;
+  c.innerHTML = '';
+  faces.forEach(function(f, i) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'smiley-btn';
+    btn.setAttribute('data-val', i+1);
+    btn.innerHTML = f.e + '<span class="sl">'+f.l+'</span>';
+    btn.addEventListener('click', function() { pickSmiley(cid, type, i+1); });
+    c.appendChild(btn);
+  });
+}
+
+function pickSmiley(cid, type, val) {
+  var btns = document.querySelectorAll('#'+cid+' .smiley-btn');
+  for (var i=0; i<btns.length; i++) btns[i].classList.remove('sel');
+  var sel = document.querySelector('#'+cid+' .smiley-btn[data-val="'+val+'"]');
+  if (sel) sel.classList.add('sel');
+  if (type === 'welcome') G.welcomeConf = val;
+  else G.postConf = val;
+}
+
+function showScreen(id) {
+  var screens = document.querySelectorAll('.screen');
+  for (var i=0; i<screens.length; i++) screens[i].classList.remove('active');
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── GAME FLOW ─────────────────────────────────────────────────────
+function startGame() {
+  var nameEl = document.getElementById('studentName');
+  var name = nameEl.value.trim();
+  if (!name) { nameEl.style.borderColor='#e63946'; nameEl.focus(); return; }
+  if (!G.welcomeConf) { alert('Please pick your confidence level before starting! 😊'); return; }
+  nameEl.style.borderColor = '';
+  G.name = name;
+  G.level = 0;
+  G.levelResults = [];
+  beginLevel();
+}
+
+function beginLevel() {
+  G.qIndex = 0;
+  G.score = 0;
+  G.answers = [];
+  G.postConf = null;
+  G.answered = false;
+  showScreen('s-question');
+  renderQuestion();
+}
+
+function renderQuestion() {
+  var lvl = LEVELS[G.level];
+  var q = lvl.questions[G.qIndex];
+
+  document.getElementById('lvlBadge').textContent = lvl.badge;
+  document.getElementById('qCount').textContent = 'Question ' + (G.qIndex+1) + ' / 10';
+  document.getElementById('progBar').style.width = (G.qIndex/10*100) + '%';
+  document.getElementById('qText').innerHTML = fmtMath(q.q);
+  document.getElementById('qHint').textContent = lvl.hint;
+
+  var inp = document.getElementById('ansInput');
+  inp.value = '';
+  inp.disabled = false;
+  inp.style.borderColor = '';
+
+  document.getElementById('checkBtn').disabled = false;
+  document.getElementById('fbBanner').style.display = 'none';
+  document.getElementById('nextWrap').style.display = 'none';
+  document.getElementById('liveScore').textContent = G.score;
+  document.getElementById('liveTot').textContent = G.qIndex;
+
+  G.answered = false;
+  setTimeout(function(){ inp.focus(); }, 50);
+}
+
+function checkAnswer() {
+  if (G.answered) return;
+
+  var q = LEVELS[G.level].questions[G.qIndex];
+  var raw = document.getElementById('ansInput').value.trim();
+
+  if (!raw) {
+    document.getElementById('ansInput').style.borderColor = '#e63946';
+    return;
+  }
+
+  G.answered = true;
+  document.getElementById('checkBtn').disabled = true;
+  document.getElementById('ansInput').disabled = true;
+
+  var correct = false;
+  for (var i=0; i<q.a.length; i++) {
+    if (answersMatch(raw, q.a[i])) { correct = true; break; }
+  }
+
+  var banner = document.getElementById('fbBanner');
+  banner.className = 'fb-banner ' + (correct ? 'fb-correct' : 'fb-incorrect');
+  banner.innerHTML = correct
+    ? '✅ Correct! Well done, ' + G.name + '!'
+    : '❌ Not quite — the answer was <strong>' + fmtMath(q.a[0]) + '</strong>';
+  banner.style.display = 'flex';
+
+  if (correct) G.score++;
+  G.answers.push({ q: q.q, correct: correct, studentAnswer: raw, expected: q.a[0] });
+
+  document.getElementById('liveScore').textContent = G.score;
+  document.getElementById('liveTot').textContent = G.qIndex + 1;
+  document.getElementById('nextWrap').style.display = 'flex';
+}
+
+function nextQuestion() {
+  G.qIndex++;
+  if (G.qIndex >= 10) {
+    showResult();
+  } else {
+    renderQuestion();
+  }
+}
+
+// ── LEVEL RESULT ──────────────────────────────────────────────────
+function showResult() {
+  var li = G.level;
+  var pct = Math.round(G.score / 10 * 100);
+  var lvl = LEVELS[li];
+  var smId = 'smPost' + li;
+
+  G.levelResults[li] = {
+    level: li+1, levelName: lvl.name, score: G.score, total: 10,
+    pct: pct, preConf: G.welcomeConf, postConf: null, feedback: '',
+    answers: G.answers.slice()
+  };
+
+  var bandClass = pct===100 ? 'band-great' : pct>=70 ? 'band-good' : 'band-try';
+  var bandText  = pct===100 ? '🌟 Perfect Score!' : pct>=70 ? '👍 Good Work!' : '💪 Keep Practising!';
+
+  var html = '';
+  html += '<h2>Level '+(li+1)+' Results 📊</h2>';
+  html += '<div class="score-big">'+G.score+'/10</div>';
+  html += '<div class="score-pct">'+pct+'%</div>';
+  html += '<div class="result-band '+bandClass+'">'+bandText+'</div>';
+
+  html += '<div class="q-review">';
+  G.answers.forEach(function(a, i) {
+    html += '<div class="q-row '+(a.correct?'q-ok':'q-bad')+'">';
+    html += '<span class="dot"></span>';
+    html += '<span>Q'+(i+1)+': '+fmtMath(a.q)+'</span>';
+    if (!a.correct) html += '<span class="q-ans">→ '+fmtMath(a.expected)+'</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  if (pct < 100) {
+    var topics = REVISION_TOPICS[li];
+    var tips = TIPS[li];
+    html += '<div class="tips-box"><h4>📚 Topics to Revise</h4><ul>';
+    topics.forEach(function(t){ html += '<li>'+t+'</li>'; });
+    html += '</ul></div>';
+    html += '<div class="tips-box"><h4>💡 4 Tips to Improve Your Mark</h4><ul>';
+    tips.forEach(function(t){ html += '<li>'+t+'</li>'; });
+    html += '</ul></div>';
+  }
+
+  html += '<div class="divider"></div>';
+  html += '<span class="smiley-label">Now you\'ve seen the questions — how do you feel about this topic?</span>';
+  html += '<div class="smiley-row" id="'+smId+'"></div>';
+
+  html += '<div class="feedback-box">';
+  html += '<label for="stuFeedback">💬 Anything you found tricky, or a message for Ms. McGuire?<br><span style="font-weight:400;color:#9070b0;font-size:0.85rem;">(optional)</span></label>';
+  html += '<textarea id="stuFeedback" style="margin-top:8px;" placeholder="e.g. I found expanding double brackets confusing, or I wasn\'t sure how to handle negative signs…"></textarea>';
+  html += '</div>';
+
+  html += '<div class="btn-row">';
+  if (li < 5) {
+    html += '<button class="btn btn-green" onclick="goNextLevel()">Next Level ➜</button>';
+  } else {
+    html += '<button class="btn btn-purple" onclick="goFinal()">See Final Results 🏆</button>';
+  }
+  html += '<button class="btn btn-amber" onclick="retryLevel()">Try Again 🔄</button>';
+  html += '</div>';
+
+  document.getElementById('resultContent').innerHTML = html;
+  showScreen('s-result');
+  buildSmileys(smId, 'post');
+}
+
+function captureExtras() {
+  var li = G.level;
+  if (!G.levelResults[li]) return;
+  if (G.postConf) G.levelResults[li].postConf = G.postConf;
+  var fb = document.getElementById('stuFeedback');
+  if (fb) G.levelResults[li].feedback = fb.value.trim();
+}
+
+function goNextLevel() { captureExtras(); G.level++; beginLevel(); }
+function retryLevel()  { captureExtras(); beginLevel(); }
+function goFinal()     { captureExtras(); renderFinal(); }
+
+// ── FINAL ─────────────────────────────────────────────────────────
+function renderFinal() {
+  var done = G.levelResults.filter(Boolean);
+  var tot = done.reduce(function(s,r){ return s+r.score; }, 0);
+  var totQ = done.length * 10;
+  var pct  = totQ > 0 ? Math.round(tot/totQ*100) : 0;
+
+  var bc = pct>=90 ? 'band-great' : pct>=60 ? 'band-good' : 'band-try';
+  var bt = pct>=90 ? '🌟 Algebra Star!' : pct>=60 ? '👍 Solid Effort!' : '💪 Keep Practising!';
+
+  var cards = done.map(function(r){
+    return '<div class="ls-card">'
+      +'<div class="ln">'+r.levelName+'</div>'
+      +'<div class="lsc">'+r.score+'/10</div>'
+      +'<div class="lsp">'+r.pct+'%</div>'
+      +'</div>';
+  }).join('');
+
+  var html = '';
+  html += '<span class="congrats">🏆</span>';
+  html += '<h2 style="text-align:center">Well done, '+G.name+'!</h2>';
+  html += '<div class="score-big">'+tot+'/'+totQ+'</div>';
+  html += '<div class="score-pct">'+pct+'% Overall</div>';
+  html += '<div class="result-band '+bc+'">'+bt+'</div>';
+  html += '<div class="level-grid">'+cards+'</div>';
+  html += '<div class="divider"></div>';
+  html += '<p style="text-align:center;font-size:0.88rem;color:#5a7090;">Download your results as an Excel file to share with Ms. McGuire.</p>';
+  html += '<div class="btn-row" style="justify-content:center;">';
+  html += '<button class="btn btn-green" onclick="downloadExcel()">📥 Download Excel Results</button>';
+  html += '<button class="btn btn-primary" onclick="resetGame()">Play Again 🔄</button>';
+  html += '</div>';
+
+  document.getElementById('finalContent').innerHTML = html;
+  showScreen('s-final');
+}
+
+function resetGame() {
+  G = { name:'', welcomeConf:null, level:0, qIndex:0, score:0, answers:[], levelResults:[], postConf:null, answered:false };
+  document.getElementById('studentName').value = '';
+  var btns = document.querySelectorAll('#smWelcome .smiley-btn');
+  for(var i=0;i<btns.length;i++) btns[i].classList.remove('sel');
+  showScreen('s-welcome');
+}
+
+// ── EXCEL ─────────────────────────────────────────────────────────
+function downloadExcel() {
+  var wb = XLSX.utils.book_new();
+
+  var sum = [
+    ["Student Name", G.name],
+    ["Pre-Game Confidence (1-5)", G.welcomeConf || "N/A"],
+    [],
+    ["Level","Level Name","Score","Total","Percentage","Pre-Confidence","Post-Confidence","Student Feedback"]
+  ];
+  G.levelResults.filter(Boolean).forEach(function(r) {
+    sum.push([r.level, r.levelName, r.score, r.total, r.pct+"%", r.preConf||"N/A", r.postConf||"N/A", r.feedback||""]);
+  });
+  var ws0 = XLSX.utils.aoa_to_sheet(sum);
+  ws0['!cols'] = [16,34,8,8,12,18,18,42].map(function(w){ return {wch:w}; });
+  XLSX.utils.book_append_sheet(wb, ws0, "Summary");
+
+  G.levelResults.filter(Boolean).forEach(function(r) {
+    var data = [
+      ["Level "+r.level+": "+r.levelName],
+      ["Student", G.name, "Score", r.score+"/10", "Percentage", r.pct+"%"],
+      ["Student Feedback", r.feedback || "None provided"],
+      [],
+      ["Q#","Question","Student Answer","Correct Answer","Mark (1=correct, 0=wrong)"]
+    ];
+    r.answers.forEach(function(a, i) {
+      data.push([i+1, a.q, a.studentAnswer, a.expected, a.correct ? 1 : 0]);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [4,38,22,22,22].map(function(w){ return {wch:w}; });
+    XLSX.utils.book_append_sheet(wb, ws, "Level "+r.level);
+  });
+
+  XLSX.writeFile(wb, "AlgebraQuest_"+G.name.replace(/\s+/g,'_')+"_Results.xlsx");
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────
+
+// Converts an algebraic expression into a canonical sorted-term string
+// so that order doesn't matter and 1x == x, -1y == -y, etc.
+function canonicalise(s) {
+  // Step 1: clean up the string
+  var t = String(s).toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[−–]/g, '-')
+    .replace(/×/g, '*')
+    .replace(/²/g, '^2')
+    .replace(/³/g, '^3')
+    .replace(/⁴/g, '^4');
+
+  // Step 2: prepend + if string doesn't start with -
+  if (t.charAt(0) !== '-') t = '+' + t;
+
+  // Step 3: split on any + or - that immediately precedes a digit, letter, or (
+  var raw = t.split(/(?=[+\-])/).filter(function(p){ return p !== '' && p !== '+'; });
+
+  // Step 4: normalise each term
+  var terms = raw.map(function(p) {
+    // Remove leading +
+    p = p.replace(/^\+/, '');
+    // Replace implicit coefficient 1 and -1:
+    //   "x"  => "1x",  "-x" => "-1x",  "(x+1)" stays,  "-1x" stays
+    p = p.replace(/^(-?)([a-z(])/, function(_, sign, rest) {
+      return (sign || '') + '1' + rest;
+    });
+    return p;
+  });
+
+  // Step 5: sort so term order doesn't matter, then join
+  terms.sort();
+  return terms.join('|');
+}
+
+function answersMatch(student, correct) {
+  return canonicalise(student) === canonicalise(correct);
+}
+
+function fmtMath(s) {
+  return String(s)
+    .replace(/\^2/g,'<sup>2</sup>')
+    .replace(/²/g,'<sup>2</sup>')
+    .replace(/\^3/g,'<sup>3</sup>')
+    .replace(/³/g,'<sup>3</sup>')
+    .replace(/\^4/g,'<sup>4</sup>')
+    .replace(/⁴/g,'<sup>4</sup>');
+}
+</script>
+</body>
+</html>
